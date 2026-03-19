@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MPP on Avalanche — Streaming Payments for AI Agents</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>⚡</text></svg>">
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">MPP <span>Avalanche</span></div>
+      <div class="subtitle">Machine Payments Protocol on Avalanche C-Chain</div>
+      <nav>
+        <div class="nav-section">Overview</div>
+        <a href="#overview" class="active">Introduction</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#contracts">Contracts</a>
+
+        <div class="nav-section">Try It</div>
+        <a href="#api-flow">Try the API</a>
+        <a href="#faucet">Get Test Tokens</a>
+
+        <div class="nav-section">Developers</div>
+        <a href="#integrate">Integration Guide</a>
+        <a href="#agent-code">Agent (Payer)</a>
+        <a href="#service-code">Service (Payee)</a>
+        <a href="#http-flow">HTTP 402 Flow</a>
+
+        <div class="nav-section">Reference</div>
+        <a href="#functions">Contract Functions</a>
+        <a href="#events">Events</a>
+        <a href="#links">Links</a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+      <div class="content">
+
+        <!-- Hero -->
+        <section id="overview">
+          <div class="hero-badge">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8"/></svg>
+            Live on Avalanche C-Chain
+          </div>
+          <h1>Machine Payments Protocol<br>on Avalanche</h1>
+          <p class="hero-desc">
+            Streaming payment channels for AI agents and services. Deposit once, sign unlimited off-chain vouchers at zero gas, settle when ready. Adapted from <a href="https://mpp.dev">Tempo's MPP</a> for any EVM chain.
+          </p>
+          <div class="hero-actions">
+            <a href="#demo" class="btn btn-primary">Try the Demo</a>
+            <a href="https://snowtrace.io/address/0xF1EB69d85897ba945B5E2EbcBAD831bf3671F137" target="_blank" class="btn btn-secondary">View on SnowTrace</a>
+            <a href="https://github.com" target="_blank" class="btn btn-secondary">GitHub</a>
+          </div>
+
+          <!-- Contract addresses -->
+          <div class="address-row">
+            <span class="label"><span class="network-badge mainnet">Mainnet</span></span>
+            <code>0xF1EB69d85897ba945B5E2EbcBAD831bf3671F137</code>
+            <button class="copy-btn" onclick="copyText('0xF1EB69d85897ba945B5E2EbcBAD831bf3671F137')">&#x2398;</button>
+          </div>
+          <div class="address-row">
+            <span class="label"><span class="network-badge testnet">Fuji</span></span>
+            <code>0x6e2DD66C1bfb66a2b579D291CdF6EA559E93619b</code>
+            <button class="copy-btn" onclick="copyText('0x6e2DD66C1bfb66a2b579D291CdF6EA559E93619b')">&#x2398;</button>
+          </div>
+        </section>
+
+        <!-- How it works -->
+        <section id="how-it-works">
+          <h2>How It Works</h2>
+          <p>Payment channels let agents pay per-request without a transaction each time. Only the open and settle/close touch the chain.</p>
+
+          <div class="flow">
+            <div class="flow-step">
+              <div class="step-num">1</div>
+              <h4>Open Channel</h4>
+              <p>Payer deposits USDC into the StreamChannel contract, naming the payee.</p>
+              <span class="gas-tag onchain">On-chain ~150k gas</span>
+            </div>
+            <div class="flow-step">
+              <div class="step-num">2</div>
+              <h4>Sign Vouchers</h4>
+              <p>Payer signs EIP-712 cumulative vouchers off-chain. Each voucher says "I owe you X total". Send via HTTP headers.</p>
+              <span class="gas-tag free">Zero gas</span>
+            </div>
+            <div class="flow-step">
+              <div class="step-num">3</div>
+              <h4>Settle or Close</h4>
+              <p>Payee submits the latest voucher on-chain to collect. Unused deposit is refunded to payer.</p>
+              <span class="gas-tag onchain">On-chain ~90k gas</span>
+            </div>
+          </div>
+
+          <div class="card-grid">
+            <div class="card">
+              <h4>&#9889; Cumulative Vouchers</h4>
+              <p>Each voucher supersedes the last. Only the final one matters — settle once, not per request.</p>
+            </div>
+            <div class="card">
+              <h4>&#128274; Escrowed Deposits</h4>
+              <p>Funds are locked in the contract. Payee can't take more than signed. Payer can reclaim after grace period.</p>
+            </div>
+            <div class="card">
+              <h4>&#127760; Any ERC-20 Token</h4>
+              <p>Works with USDC, USDT, WAVAX, or any standard token on Avalanche.</p>
+            </div>
+            <div class="card">
+              <h4>&#128279; Chain-Aware IDs</h4>
+              <p>Channel IDs include <code>block.chainid</code> — no cross-chain replay attacks.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Contracts -->
+        <section id="contracts">
+          <h2>Deployed Contracts</h2>
+
+          <table>
+            <thead>
+              <tr><th>Network</th><th>Contract</th><th>Chain ID</th><th>USDC</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="network-badge mainnet">Mainnet</span></td>
+                <td><code>0xF1EB69d85897ba945B5E2EbcBAD831bf3671F137</code></td>
+                <td>43114</td>
+                <td><code>0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E</code></td>
+              </tr>
+              <tr>
+                <td><span class="network-badge testnet">Fuji</span></td>
+                <td><code>0x6e2DD66C1bfb66a2b579D291CdF6EA559E93619b</code></td>
+                <td>43113</td>
+                <td><code>0x5425890298aed601595a70AB815c96711a31Bc65</code></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="callout">
+            <strong>EIP-712 Domain:</strong> The contract uses domain name <code>"Tempo Stream Channel"</code> version <code>"1"</code> — matching Tempo's original spec for cross-compatibility.
+          </div>
+        </section>
+
+        <section id="demo">
+          <div class="callout warning" id="faucet">
+            <strong>Need test tokens?</strong> Get Fuji AVAX from <a href="https://core.app/tools/testnet-faucet/" target="_blank">Core Faucet</a> and test USDC from <a href="https://staging.aave.com/faucet/" target="_blank">Aave Faucet</a> (select Fuji network).
+          </div>
+        </section>
+
+        <!-- MPP API Console -->
+        <section id="api-flow">
+          <h2>Try the MPP API</h2>
+          <p>This is a <strong>real API</strong> gated by MPP payments. No voucher = 402 rejected. Valid voucher = data returned. Try it.</p>
+
+          <div class="api-layout">
+            <!-- Left: Controls -->
+            <div class="api-controls">
+              <div class="demo-panel">
+                <div class="demo-header">
+                  <h3>Controls</h3>
+                  <span style="font-size:12px; color:var(--text-muted);"><code id="api-base-url">localhost:3402</code></span>
+                </div>
+                <div class="demo-body">
+
+                  <!-- Step 1: Try without payment -->
+                  <div class="api-step">
+                    <h3>1. Call without payment</h3>
+                    <p>Hit the API with no voucher — get <code>402</code>.</p>
+                    <button class="btn btn-secondary btn-sm" onclick="apiCallNoPay()">POST /api/data (no voucher)</button>
+                  </div>
+
+                  <!-- Step 2: Discover pricing -->
+                  <div class="api-step" style="margin-top:16px;">
+                    <h3>2. Discover pricing</h3>
+                    <p>Learn the service's payment terms.</p>
+                    <button class="btn btn-secondary btn-sm" onclick="apiDiscoverMpp()">GET /.well-known/mpp</button>
+                  </div>
+
+                  <!-- Step 3: Setup channel -->
+                  <div class="api-step" style="margin-top:16px;">
+                    <h3>3. Open a payment channel</h3>
+                    <p>Connect wallet, approve USDC, deposit into channel.</p>
+                    <div class="wallet-bar">
+                      <div class="dot" id="wallet-dot"></div>
+                      <span class="wallet-addr" id="wallet-addr">Not connected</span>
+                      <span class="wallet-bal" id="wallet-bal"></span>
+                      <button class="btn btn-sm btn-primary" id="connect-btn" onclick="connectWallet()">Connect</button>
+                    </div>
+                    <div class="form-row" style="margin-top:8px;">
+                      <div class="form-group">
+                        <label>Deposit (USDC)</label>
+                        <input type="text" id="deposit-amount" placeholder="1.00" value="1">
+                      </div>
+                      <div class="form-group" style="display:flex; align-items:flex-end; gap:6px;">
+                        <button class="btn btn-secondary btn-sm" id="approve-btn" onclick="approveToken()" disabled>Approve</button>
+                        <button class="btn btn-primary btn-sm" id="open-btn" onclick="openChannel()" disabled>Open</button>
+                      </div>
+                    </div>
+                    <div id="channel-info" style="display:none; margin-top:8px;">
+                      <div class="address-row" style="padding:8px 12px;">
+                        <span class="label" style="min-width:auto;">CH</span>
+                        <code id="active-channel-id" style="font-size:10px;"></code>
+                        <button class="copy-btn" onclick="copyText(document.getElementById('active-channel-id').textContent)">&#x2398;</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Step 4: Make paid API calls -->
+                  <div class="api-step" style="margin-top:16px;">
+                    <h3>4. Make paid API calls</h3>
+                    <p>Signs a voucher (zero gas), sends via HTTP headers, gets data.</p>
+                    <div class="form-group">
+                      <label>Query</label>
+                      <select id="api-query" style="width:100%; padding:8px 12px; background:var(--bg-soft); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:13px;">
+                        <option value="AVAX price">AVAX price</option>
+                        <option value="gas fees">Gas fees</option>
+                        <option value="top DeFi pools">Top DeFi pools</option>
+                        <option value="custom">Custom query...</option>
+                      </select>
+                    </div>
+                    <div id="custom-query-row" style="display:none;" class="form-group">
+                      <label>Custom query</label>
+                      <input type="text" id="custom-query" placeholder="Ask anything...">
+                    </div>
+                    <button class="btn btn-primary" id="paid-call-btn" onclick="apiCallWithPayment()" disabled>Send Paid Request</button>
+                    <div style="margin-top:8px; font-size:12px; color:var(--text-muted);">
+                      Requests: <strong id="request-count">0</strong> &middot;
+                      Paid: <strong id="total-paid">0.00 USDC</strong> (off-chain)
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Live Log -->
+            <div class="api-log-panel">
+              <div class="demo-panel" style="position:sticky; top:24px;">
+                <div class="demo-header">
+                  <h3>Live Request / Response</h3>
+                  <button class="btn btn-sm btn-secondary" onclick="document.getElementById('api-log').innerHTML=''">Clear</button>
+                </div>
+                <div class="log" id="api-log" style="min-height:500px; max-height:calc(100vh - 120px); border:none; border-radius:0; margin:0;"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Integration Guide -->
+        <section id="integrate">
+          <h2>Integration Guide</h2>
+
+          <h3>For Services (Accept Payments)</h3>
+          <p>Add MPP payment gating to any HTTP API. Agents discover your pricing via <code>/.well-known/mpp</code>, then send signed vouchers with each request.</p>
+
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(event, 'tab-service')">Service (Express)</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-agent')">Agent (TypeScript)</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-http')">HTTP 402 Flow</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-solidity')">Solidity Interface</button>
+          </div>
+
+          <!-- Service code -->
+          <div class="tab-panel active" id="tab-service">
+<pre><code><span class="code-label">service.ts</span>
+<span style="color:#c084fc">import</span> express <span style="color:#c084fc">from</span> <span style="color:#a5d6a7">"express"</span>;
+
+<span style="color:#71717a">// MPP discovery endpoint</span>
+app.get(<span style="color:#a5d6a7">"/.well-known/mpp"</span>, (req, res) => {
+  res.json({
+    version: <span style="color:#a5d6a7">"draft-tempo-stream-00"</span>,
+    payee: SERVICE_ADDRESS,
+    channel_contract: <span style="color:#a5d6a7">"0xF1EB69d85897ba945B5E2EbcBAD831bf3671F137"</span>,
+    chain_id: <span style="color:#93c5fd">43114</span>,
+    price_per_request: <span style="color:#a5d6a7">"100000"</span>,  <span style="color:#71717a">// 0.10 USDC</span>
+    accepted_tokens: [USDC_ADDRESS],
+  });
+});
+
+<span style="color:#71717a">// Paid API endpoint</span>
+app.post(<span style="color:#a5d6a7">"/api/data"</span>, <span style="color:#c084fc">async</span> (req, res) => {
+  <span style="color:#c084fc">const</span> channelId = req.headers[<span style="color:#a5d6a7">"x-mpp-channel-id"</span>];
+  <span style="color:#c084fc">const</span> amount    = req.headers[<span style="color:#a5d6a7">"x-mpp-cumulative-amount"</span>];
+  <span style="color:#c084fc">const</span> voucher   = req.headers[<span style="color:#a5d6a7">"x-mpp-voucher"</span>];
+
+  <span style="color:#c084fc">if</span> (!channelId || !amount || !voucher) {
+    <span style="color:#c084fc">return</span> res.status(<span style="color:#93c5fd">402</span>).json({
+      error: <span style="color:#a5d6a7">"Payment Required"</span>,
+      mpp_info: <span style="color:#a5d6a7">"GET /.well-known/mpp"</span>
+    });
+  }
+
+  <span style="color:#71717a">// Store voucher, serve data, settle later</span>
+  storeVoucher(channelId, amount, voucher);
+  res.json({ data: <span style="color:#a5d6a7">"your response here"</span> });
+});</code></pre>
+          </div>
+
+          <!-- Agent code -->
+          <div class="tab-panel" id="tab-agent">
+<pre><code><span class="code-label">agent.ts</span>
+<span style="color:#c084fc">import</span> { createWalletClient, http, parseUnits } <span style="color:#c084fc">from</span> <span style="color:#a5d6a7">"viem"</span>;
+
+<span style="color:#71717a">// 1. Open channel (one-time, on-chain)</span>
+<span style="color:#c084fc">const</span> channelId = <span style="color:#c084fc">await</span> walletClient.writeContract({
+  address: STREAM_CHANNEL,
+  abi: streamChannelAbi,
+  functionName: <span style="color:#a5d6a7">"open"</span>,
+  args: [payeeAddress, USDC, parseUnits(<span style="color:#a5d6a7">"1"</span>, <span style="color:#93c5fd">6</span>), salt, zeroAddress],
+});
+
+<span style="color:#71717a">// 2. Sign vouchers off-chain (zero gas, repeat per request)</span>
+<span style="color:#c084fc">const</span> signature = <span style="color:#c084fc">await</span> walletClient.signTypedData({
+  domain: {
+    name: <span style="color:#a5d6a7">"Tempo Stream Channel"</span>,
+    version: <span style="color:#a5d6a7">"1"</span>,
+    chainId: <span style="color:#93c5fd">43114</span>,
+    verifyingContract: STREAM_CHANNEL,
+  },
+  types: {
+    Voucher: [
+      { name: <span style="color:#a5d6a7">"channelId"</span>, type: <span style="color:#a5d6a7">"bytes32"</span> },
+      { name: <span style="color:#a5d6a7">"cumulativeAmount"</span>, type: <span style="color:#a5d6a7">"uint128"</span> },
+    ],
+  },
+  primaryType: <span style="color:#a5d6a7">"Voucher"</span>,
+  message: { channelId, cumulativeAmount: parseUnits(<span style="color:#a5d6a7">"0.10"</span>, <span style="color:#93c5fd">6</span>) },
+});
+
+<span style="color:#71717a">// 3. Send to service via HTTP</span>
+<span style="color:#c084fc">await</span> fetch(<span style="color:#a5d6a7">"https://api.example.com/data"</span>, {
+  headers: {
+    <span style="color:#a5d6a7">"X-MPP-Channel-Id"</span>: channelId,
+    <span style="color:#a5d6a7">"X-MPP-Cumulative-Amount"</span>: <span style="color:#a5d6a7">"100000"</span>,
+    <span style="color:#a5d6a7">"X-MPP-Voucher"</span>: signature,
+  },
+});</code></pre>
+          </div>
+
+          <!-- HTTP flow -->
+          <div class="tab-panel" id="tab-http">
+<pre><code><span class="code-label">HTTP 402 Flow</span>
+<span style="color:#71717a"># 1. Agent makes request without payment</span>
+<span style="color:#93c5fd">POST</span> /api/data
+<span style="color:#E84142">→ 402 Payment Required</span>
+{
+  "error": "Payment Required",
+  "mpp_info": "GET /.well-known/mpp"
+}
+
+<span style="color:#71717a"># 2. Agent discovers pricing</span>
+<span style="color:#93c5fd">GET</span> /.well-known/mpp
+<span style="color:#22c55e">→ 200 OK</span>
+{
+  "version": "draft-tempo-stream-00",
+  "payee": "0x3d7A...D787",
+  "channel_contract": "0xF1EB...F137",
+  "chain_id": 43114,
+  "price_per_request": "100000",
+  "accepted_tokens": ["0xB97E...a6E"]
+}
+
+<span style="color:#71717a"># 3. Agent opens channel on-chain, then sends with voucher</span>
+<span style="color:#93c5fd">POST</span> /api/data
+<span style="color:#eab308">X-MPP-Channel-Id:</span> 0x9a0b6130...
+<span style="color:#eab308">X-MPP-Cumulative-Amount:</span> 100000
+<span style="color:#eab308">X-MPP-Voucher:</span> 0x1daffe21...
+<span style="color:#22c55e">→ 200 OK</span>
+{ "data": "..." }</code></pre>
+          </div>
+
+          <!-- Solidity interface -->
+          <div class="tab-panel" id="tab-solidity">
+<pre><code><span class="code-label">IStreamChannel.sol</span>
+<span style="color:#c084fc">interface</span> <span style="color:#93c5fd">IStreamChannel</span> {
+  <span style="color:#c084fc">struct</span> Channel {
+    <span style="color:#93c5fd">bool</span> finalized;
+    <span style="color:#93c5fd">uint64</span> closeRequestedAt;
+    <span style="color:#93c5fd">address</span> payer;
+    <span style="color:#93c5fd">address</span> payee;
+    <span style="color:#93c5fd">address</span> token;
+    <span style="color:#93c5fd">address</span> authorizedSigner;
+    <span style="color:#93c5fd">uint128</span> deposit;
+    <span style="color:#93c5fd">uint128</span> settled;
+  }
+
+  <span style="color:#c084fc">function</span> <span style="color:#eab308">open</span>(
+    <span style="color:#93c5fd">address</span> payee, <span style="color:#93c5fd">address</span> token,
+    <span style="color:#93c5fd">uint128</span> deposit, <span style="color:#93c5fd">bytes32</span> salt,
+    <span style="color:#93c5fd">address</span> authorizedSigner
+  ) <span style="color:#c084fc">external returns</span> (<span style="color:#93c5fd">bytes32</span> channelId);
+
+  <span style="color:#c084fc">function</span> <span style="color:#eab308">settle</span>(
+    <span style="color:#93c5fd">bytes32</span> channelId, <span style="color:#93c5fd">uint128</span> cumulativeAmount,
+    <span style="color:#93c5fd">bytes calldata</span> signature
+  ) <span style="color:#c084fc">external</span>;
+
+  <span style="color:#c084fc">function</span> <span style="color:#eab308">close</span>(...) <span style="color:#c084fc">external</span>;
+  <span style="color:#c084fc">function</span> <span style="color:#eab308">topUp</span>(<span style="color:#93c5fd">bytes32</span>, <span style="color:#93c5fd">uint256</span>) <span style="color:#c084fc">external</span>;
+  <span style="color:#c084fc">function</span> <span style="color:#eab308">requestClose</span>(<span style="color:#93c5fd">bytes32</span>) <span style="color:#c084fc">external</span>;
+  <span style="color:#c084fc">function</span> <span style="color:#eab308">withdraw</span>(<span style="color:#93c5fd">bytes32</span>) <span style="color:#c084fc">external</span>;
+
+  <span style="color:#c084fc">function</span> <span style="color:#eab308">getChannel</span>(<span style="color:#93c5fd">bytes32</span>)
+    <span style="color:#c084fc">external view returns</span> (Channel <span style="color:#c084fc">memory</span>);
+}</code></pre>
+          </div>
+        </section>
+
+        <!-- Functions reference -->
+        <section id="functions">
+          <h2>Contract Functions</h2>
+          <table>
+            <thead><tr><th>Function</th><th>Caller</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>open()</code></td><td>Payer</td><td>Deposit tokens and create a new payment channel</td></tr>
+              <tr><td><code>settle()</code></td><td>Payee</td><td>Submit a signed voucher to claim accumulated payment</td></tr>
+              <tr><td><code>topUp()</code></td><td>Payer</td><td>Add more tokens to an existing channel (cancels pending close)</td></tr>
+              <tr><td><code>close()</code></td><td>Payee</td><td>Final settlement + refund remaining deposit to payer</td></tr>
+              <tr><td><code>requestClose()</code></td><td>Payer</td><td>Start 15-minute grace period for unilateral withdrawal</td></tr>
+              <tr><td><code>withdraw()</code></td><td>Payer</td><td>Reclaim unsettled deposit after grace period expires</td></tr>
+              <tr><td><code>getChannel()</code></td><td>Anyone</td><td>Read channel state (view function, no gas)</td></tr>
+              <tr><td><code>computeChannelId()</code></td><td>Anyone</td><td>Compute deterministic channel ID from parameters</td></tr>
+              <tr><td><code>getVoucherDigest()</code></td><td>Anyone</td><td>Get the EIP-712 digest for a voucher (for verification)</td></tr>
+              <tr><td><code>getChannelsBatch()</code></td><td>Anyone</td><td>Read multiple channels in one call</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="events">
+          <h2>Events</h2>
+          <table>
+            <thead><tr><th>Event</th><th>Emitted When</th></tr></thead>
+            <tbody>
+              <tr><td><code>ChannelOpened</code></td><td>A new channel is created with a deposit</td></tr>
+              <tr><td><code>Settled</code></td><td>Payee claims payment via a signed voucher</td></tr>
+              <tr><td><code>TopUp</code></td><td>Payer adds more funds to a channel</td></tr>
+              <tr><td><code>CloseRequested</code></td><td>Payer initiates the 15-minute grace period</td></tr>
+              <tr><td><code>CloseRequestCancelled</code></td><td>Payer tops up, cancelling a pending close</td></tr>
+              <tr><td><code>ChannelClosed</code></td><td>Channel is finalized (cooperative or after grace)</td></tr>
+              <tr><td><code>ChannelExpired</code></td><td>Payer withdraws after grace period</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Links -->
+        <section id="links">
+          <h2>Links</h2>
+          <div class="card-grid">
+            <a href="https://snowtrace.io/address/0xF1EB69d85897ba945B5E2EbcBAD831bf3671F137" target="_blank" class="card" style="text-decoration:none;">
+              <h4>&#128269; SnowTrace (Mainnet)</h4>
+              <p>Verified contract on Avalanche C-Chain mainnet</p>
+            </a>
+            <a href="https://testnet.snowtrace.io/address/0x6e2DD66C1bfb66a2b579D291CdF6EA559E93619b" target="_blank" class="card" style="text-decoration:none;">
+              <h4>&#129514; SnowTrace (Fuji)</h4>
+              <p>Testnet deployment for development and testing</p>
+            </a>
+            <a href="https://mpp.dev" target="_blank" class="card" style="text-decoration:none;">
+              <h4>&#128214; MPP Specification</h4>
+              <p>Official Machine Payments Protocol docs by Tempo</p>
+            </a>
+            <a href="https://github.com/tempoxyz/tempo" target="_blank" class="card" style="text-decoration:none;">
+              <h4>&#128187; Original Source</h4>
+              <p>Tempo's TempoStreamChannel.sol — our adaptation source</p>
+            </a>
+          </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+          <span>MPP on Avalanche &mdash; adapted from <a href="https://mpp.dev">mpp.dev</a></span>
+          <div class="footer-links">
+            <a href="https://snowtrace.io/address/0xF1EB69d85897ba945B5E2EbcBAD831bf3671F137" target="_blank">SnowTrace</a>
+            <a href="https://mpp.dev" target="_blank">MPP Spec</a>
+            <a href="https://github.com/tempoxyz/tempo" target="_blank">Tempo</a>
+          </div>
+        </footer>
+
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

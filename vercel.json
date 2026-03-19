@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/.well-known/mpp", "destination": "/api/mpp-info" },
+    { "source": "/api/data", "destination": "/api/data" },
+    { "source": "/admin/status", "destination": "/api/status" }
+  ]
+}
