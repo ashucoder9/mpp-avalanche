@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+contracts/lib/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# Environment
+.env
+mpp-example/.env
+
+# OS
+.DS_Store
